@@ -1,0 +1,3 @@
+# Azure Functions requirements
+azure-functions
+azure-cosmos
