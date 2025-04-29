@@ -1,0 +1,78 @@
+name: Backend Security CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - 'infrastructure/**'
+      - '.github/workflows/backend-security-ci-cd.yml'
+
+jobs:
+  test-scan-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        cd api
+        python -m pip install --upgrade pip
+        pip install pytest pytest-mock
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        cd api
+        python -m pytest tests/
+    
+    # Generate SBOM using Syft
+    - name: Generate SBOM with Syft
+      uses: anchore/sbom-action@v0
+      with:
+        path: ./api
+        format: spdx-json
+        output-file: ./api/sbom.spdx.json
+    
+    # Vulnerability scanning with Grype
+    - name: Scan for vulnerabilities with Grype
+      uses: anchore/scan-action@v3
+      id: scan
+      with:
+        path: ./api
+        fail-build: true
+        severity-cutoff: high
+    
+    - name: Upload vulnerability report
+      uses: github/codeql-action/upload-sarif@v2
+      if: success() || failure()
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+    
+    - name: Login to Azure
+      if: success()
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Deploy ARM Template
+      if: success()
+      uses: azure/arm-deploy@v1
+      with:
+        subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        template: ./infrastructure/azuredeploy.json
+        parameters: 'location=${{ secrets.AZURE_LOCATION }}'
+    
+    - name: Deploy Function App
+      if: success()
+      run: |
+        cd api
+        pip install azure-functions-core-tools
+        func azure functionapp publish ${{ secrets.AZURE_FUNCTION_APP_NAME }}

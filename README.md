@@ -39,7 +39,10 @@ The project uses the following Azure services:
 │   └── deploy.sh             # Deployment script
 ├── .github/workflows/        # GitHub Actions workflows
 │   ├── backend-ci-cd.yml     # CI/CD for backend
-│   └── frontend-ci-cd.yml    # CI/CD for frontend
+│   ├── backend-security-ci-cd.yml # Security-enhanced CI/CD for backend
+│   ├── codeql-analysis.yml   # CodeQL security scanning
+│   ├── frontend-ci-cd.yml    # CI/CD for frontend
+│   └── frontend-security-ci-cd.yml # Security-enhanced CI/CD for frontend
 ├── docs/                     # Documentation
 │   └── github-actions-setup.md # GitHub Actions setup guide
 ├── src/                      # Frontend React application
@@ -59,6 +62,9 @@ The project uses the following Azure services:
 - Azure CosmosDB
 - Azure Storage
 - GitHub Actions
+- CodeQL (Security scanning)
+- Syft (SBOM generation)
+- Grype (Vulnerability scanning)
 
 ## Testing
 
@@ -78,16 +84,26 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### Backend Pipeline
 - Triggered when changes are pushed to `api/` or `infrastructure/` directories
 - Runs Python tests
-- If tests pass, deploys the ARM template and Function App to Azure
+- Generates SBOM (Software Bill of Materials) using Syft
+- Scans for vulnerabilities using Grype
+- If tests and security scans pass, deploys the ARM template and Function App to Azure
 
 ### Frontend Pipeline
 - Triggered when changes are pushed to frontend code
+- Generates SBOM (Software Bill of Materials) using Syft
+- Scans for vulnerabilities using Grype
 - Builds the React application
 - Uploads build files to Azure Storage
 - Purges the CDN cache
 
-For detailed setup instructions, see [GitHub Actions Setup](./docs/github-actions-setup.md).
-- Azure CDN
+### Security Scanning
+- CodeQL analysis runs on pull requests to main branch and on a monthly schedule
+- Fails builds if high-severity security issues are detected
+- SBOM generation provides inventory of all dependencies
+- Grype vulnerability scanning provides defense-in-depth alongside GitHub's security features
+
+For detailed setup instructions, see [GitHub Actions Setup](./docs/github-actions-setup.md).  
+For information about security measures, see [Security Measures](./docs/security-measures.md).
 
 ## Getting Started
 

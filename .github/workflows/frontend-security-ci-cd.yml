@@ -1,0 +1,84 @@
+name: Frontend Security CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - '.github/workflows/frontend-security-ci-cd.yml'
+
+jobs:
+  build-scan-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    # Generate SBOM using Syft
+    - name: Generate SBOM with Syft
+      uses: anchore/sbom-action@v0
+      with:
+        path: ./
+        format: spdx-json
+        output-file: ./sbom.spdx.json
+    
+    # Vulnerability scanning with Grype
+    - name: Scan for vulnerabilities with Grype
+      uses: anchore/scan-action@v3
+      id: scan
+      with:
+        path: ./
+        fail-build: true
+        severity-cutoff: high
+    
+    - name: Upload vulnerability report
+      uses: github/codeql-action/upload-sarif@v2
+      if: success() || failure()
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+    
+    - name: Build
+      if: success()
+      run: npm run build
+      env:
+        VITE_VISITOR_API_URL: ${{ secrets.VITE_VISITOR_API_URL }}
+    
+    - name: Login to Azure
+      if: success()
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Upload to Azure Storage
+      if: success()
+      uses: azure/cli@v1
+      with:
+        inlineScript: |
+          az storage blob upload-batch \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --auth-mode login \
+            -d '$web' \
+            -s ./dist
+    
+    - name: Purge CDN Endpoint
+      if: success()
+      uses: azure/cli@v1
+      with:
+        inlineScript: |
+          az cdn endpoint purge \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_CDN_ENDPOINT }} \
+            --profile-name ${{ secrets.AZURE_CDN_PROFILE }} \
+            --content-paths '/*'
