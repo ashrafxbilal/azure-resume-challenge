@@ -1,6 +1,6 @@
 # Bilal Ashraf's Portfolio - Azure Resume Challenge
 
-A modern, responsive portfolio website showcasing my work as a Java Developer and DevOps Engineer, implemented as part of the Azure Resume Challenge.
+A modern, responsive portfolio website showcasing my work as a Java Developer and DevOps Engineer, implemented as part of the Azure Resume Challenge (https://cloudresumechallenge.dev/docs/the-challenge/azure/).
 
 ## Azure Resume Challenge Implementation
 
