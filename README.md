@@ -21,6 +21,7 @@ The project uses the following Azure services:
 - **Database**: Azure CosmosDB (Table API) in serverless mode
 - **HTTPS & CDN**: Azure CDN for secure delivery
 - **Infrastructure as Code**: ARM Templates for resource provisioning
+- **CI/CD**: GitHub Actions for automated testing and deployment
 
 ## Project Structure
 
@@ -28,10 +29,19 @@ The project uses the following Azure services:
 ├── api/                      # Azure Functions code
 │   ├── function_app.py       # Python function for visitor counter
 │   ├── host.json             # Function configuration
-│   └── requirements.txt      # Python dependencies
+│   ├── requirements.txt      # Python dependencies
+│   ├── pytest.ini            # Pytest configuration
+│   └── tests/                # Python tests
+│       ├── __init__.py
+│       └── test_function_app.py # Tests for the visitor counter
 ├── infrastructure/           # IaC resources
 │   ├── azuredeploy.json      # ARM template for Azure resources
 │   └── deploy.sh             # Deployment script
+├── .github/workflows/        # GitHub Actions workflows
+│   ├── backend-ci-cd.yml     # CI/CD for backend
+│   └── frontend-ci-cd.yml    # CI/CD for frontend
+├── docs/                     # Documentation
+│   └── github-actions-setup.md # GitHub Actions setup guide
 ├── src/                      # Frontend React application
 │   ├── components/           # React components
 │   │   └── VisitorCounter.tsx # Visitor counter component
@@ -48,6 +58,35 @@ The project uses the following Azure services:
 - Azure Functions
 - Azure CosmosDB
 - Azure Storage
+- GitHub Actions
+
+## Testing
+
+The project includes automated tests for the backend Python code. To run the tests locally:
+
+```bash
+cd api
+pip install pytest pytest-mock
+pip install -r requirements.txt
+python -m pytest
+```
+
+## CI/CD Pipelines
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+### Backend Pipeline
+- Triggered when changes are pushed to `api/` or `infrastructure/` directories
+- Runs Python tests
+- If tests pass, deploys the ARM template and Function App to Azure
+
+### Frontend Pipeline
+- Triggered when changes are pushed to frontend code
+- Builds the React application
+- Uploads build files to Azure Storage
+- Purges the CDN cache
+
+For detailed setup instructions, see [GitHub Actions Setup](./docs/github-actions-setup.md).
 - Azure CDN
 
 ## Getting Started
